@@ -17,27 +17,24 @@ import java.util.Arrays;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 
-public class CPUPerProcess extends Thread {
+public class MemPerProcess extends Thread {
 
 	private SystemInfo si;
 	private PrintWriter pw;
 	private DateFormat df;
-	private long prevTime, currTime;
-	private int numOfCPU;
 
 	private long waitTime;
 
-	public CPUPerProcess(String logPath, long waitTime) {
-		this.si = new SystemInfo();
+	public MemPerProcess(String logPath, long waitTime) {
+        this.si = new SystemInfo();
 		this.df = new SimpleDateFormat("yyyyMMdd-HHmmss");
 		this.waitTime = waitTime;
-		this.prevTime = 0;
 
 		try {
 			this.pw = new PrintWriter(new FileOutputStream(
-				new File(logPath+"/"+df.format(new Date())+"_cpu_per_process.log"),
+				new File(logPath+"/"+df.format(new Date())+"_mem_per_process.log"),
 				true));
-			this.pw.println("DATE-TIME PID %CPU");
+			this.pw.println("DATE-TIME PID %MEM");
 		} catch(Exception e) {
 			System.out.println(e.toString());
 		}
@@ -45,16 +42,13 @@ public class CPUPerProcess extends Thread {
 
 	private void printProcesses(OperatingSystem os, GlobalMemory memory) {
 		int pid = os.getProcessId(); // this pid
-		OSProcess p = os.getProcess(pid);
-		this.currTime = p.getKernelTime() + p.getUserTime();
-		long timeDiff = currTime - prevTime;
-		prevTime = currTime;
+        OSProcess p = os.getProcess(pid);
 		
 		try {
 			this.pw.println(String.format("%s %d %.1f",
 						df.format(new Date()),
 						pid,
-						100d * timeDiff / this.numOfCPU));
+						100d * p.getResidentSetSize() / memory.getTotal()));
 			this.pw.flush();
 		} catch(Exception e) {
 			System.out.println(e.toString());
@@ -66,7 +60,6 @@ public class CPUPerProcess extends Thread {
 		GlobalMemory gm = hal.getMemory();
 		CentralProcessor cp = hal.getProcessor();
 		OperatingSystem os = si.getOperatingSystem();
-		this.numOfCPU = cp.getLogicalProcessorCount();
 
 		while (true) {
 			printProcesses(os, gm);
